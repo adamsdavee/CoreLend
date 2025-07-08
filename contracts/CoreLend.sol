@@ -31,6 +31,8 @@ contract CoreLend is Ownable {
         _;
     }
 
+    constructor () Ownable(msg.sender) {}
+
     function addSupportedToken(address token) external onlyOwner {
         isSupportedToken[token] = true;
     }
