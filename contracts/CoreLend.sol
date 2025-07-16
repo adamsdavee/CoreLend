@@ -24,7 +24,7 @@ contract CoreLend is Ownable {
     mapping(address => mapping(address => uint256)) public lenderBalances;
 
     // Borrower loans
-    mapping(address => Loan) public loans;
+    mapping(address => mapping(address => Loan)) public loans;
 
     modifier onlySupported(address token) {
         require(isSupportedToken[token], "Unsupported token");
@@ -57,7 +57,7 @@ contract CoreLend is Ownable {
         uint256 requiredCollateral = (borrowAmount * collateralFactor) / 100;
         IERC20(collateralToken).transferFrom(msg.sender, address(this), requiredCollateral);
 
-        loans[msg.sender] = Loan({
+        loans[msg.sender][borrowToken] = Loan({
             collateralToken: collateralToken,
             borrowToken: borrowToken,
             collateralAmount: requiredCollateral,
@@ -68,8 +68,8 @@ contract CoreLend is Ownable {
         IERC20(borrowToken).transfer(msg.sender, borrowAmount);
     }
 
-    function repay() external {
-        Loan memory loan = loans[msg.sender];
+    function repay(address borrowToken) external {
+        Loan memory loan = loans[msg.sender][borrowToken];
         require(loan.borrowAmount > 0, "No loan");
 
         uint256 timeElapsed = block.timestamp - loan.timestamp;
@@ -79,11 +79,11 @@ contract CoreLend is Ownable {
         IERC20(loan.borrowToken).transferFrom(msg.sender, address(this), totalRepay);
         IERC20(loan.collateralToken).transfer(msg.sender, loan.collateralAmount);
 
-        delete loans[msg.sender];
+        delete loans[msg.sender][borrowToken];
     }
 
-    function currentDebt(address user) public view returns (uint256) {
-        Loan memory loan = loans[user];
+    function currentDebt(address user, address borrowToken) public view returns (uint256) {
+        Loan memory loan = loans[user][borrowToken];
         if (loan.borrowAmount == 0) return 0;
 
         uint256 timeElapsed = block.timestamp - loan.timestamp;
@@ -91,14 +91,22 @@ contract CoreLend is Ownable {
         return loan.borrowAmount + interest;
     }
 
-    function liquidate(address user) external {
-        Loan memory loan = loans[user];
+    function liquidate(address user, address borrowToken) external {
+        Loan memory loan = loans[user][borrowToken];
         require(loan.borrowAmount > 0, "No loan");
 
-        uint256 debt = currentDebt(user);
+        uint256 debt = currentDebt(user, borrowToken);
         require((loan.collateralAmount * 100) / debt < collateralFactor, "Healthy loan");
 
-        delete loans[user];
+        delete loans[user][borrowToken];
         IERC20(loan.collateralToken).transfer(msg.sender, loan.collateralAmount);
+    }
+
+    function getLendersBalance(address user, address tokenAddress) external view returns (uint256) {
+        return lenderBalances[user][tokenAddress];
+    }
+
+    function getLoansBalance(address user, address borrowToken) external view returns (Loan memory) {
+        return loans[user][borrowToken];
     }
 }
