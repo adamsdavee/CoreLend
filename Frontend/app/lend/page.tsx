@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,27 +16,21 @@ const supportedTokens = [
     symbol: "USDT",
     name: "Tether USD",
     logo: "💵",
-    balance: "1,250.00",
     apy: "8.5%",
-    totalDeposited: "0.00",
     address: "0x367a5a4C14214BfE67d3C00A97F19Cecd2cf9e87",
   },
   {
     symbol: "DAI",
     name: "Dai Stablecoin",
     logo: "🟡",
-    balance: "850.50",
     apy: "7.8%",
-    totalDeposited: "0.00",
     address: "0x7a8eF80C8136862fc7402E8Cfb9Cd1ea9c3BFB4B",
   },
   {
     symbol: "USDC",
     name: "USD Coin",
     logo: "🔵",
-    balance: "2,100.75",
     apy: "8.2%",
-    totalDeposited: "0.00",
     address: "0x2bE22845339D49E9b296AbA5462D78F2e929DB05",
   },
 ]
@@ -46,6 +40,38 @@ export default function LendPage() {
   const { toast } = useToast()
   const [depositAmounts, setDepositAmounts] = useState<{ [key: string]: string }>({})
   const [withdrawAmounts, setWithdrawAmounts] = useState<{ [key: string]: string }>({})
+  const [balances, setBalances] = useState<{ [key: string]: string }>({})
+  const [deposits, setDeposits] = useState<{ [key: string]: string }>({})
+
+  const fetchBalances = async () => {
+    if (!signer) return
+
+    const updatedBalances: { [key: string]: string } = {};
+    const updatedDeposits: { [key: string]: string } = {};
+
+
+    for (const token of supportedTokens) {
+      const tokenContract = new ethers.Contract(token.address, CONTRACT_TOKEN, signer)
+      const mainContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+
+      const [balance, deposited] = await Promise.all([
+        tokenContract.balanceOf(signer),
+        mainContract.getLendersBalance(signer, token.address),
+      ])
+
+      updatedBalances[token.symbol] = ethers.formatUnits(balance, 18)
+      updatedDeposits[token.symbol] = ethers.formatUnits(deposited, 18)
+    }
+
+    setBalances(updatedBalances)
+    setDeposits(updatedDeposits)
+  }
+
+  useEffect(() => {
+    if (isConnected && isCorrectNetwork) {
+      fetchBalances()
+    }
+  }, [isConnected, isCorrectNetwork])
 
   const handleDeposit = async (token: string, amount: string) => {
     if (!isConnected || !isCorrectNetwork) {
@@ -83,6 +109,9 @@ export default function LendPage() {
       })
 
       setDepositAmounts((prev) => ({ ...prev, [token]: "" }))
+
+      await fetchBalances()
+
     } catch (error) {
       console.error("Deposit failed:", error)
       toast({
@@ -123,6 +152,8 @@ export default function LendPage() {
       })
 
       setWithdrawAmounts((prev) => ({ ...prev, [token]: "" }))
+
+      await fetchBalances()
     } catch (error) {
       console.error("Withdrawal failed:", error)
       toast({
@@ -170,7 +201,7 @@ export default function LendPage() {
                     Wallet Balance
                   </span>
                   <span className="font-medium">
-                    {token.balance} {token.symbol}
+                    {balances[token.symbol]} {token.symbol}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -179,7 +210,7 @@ export default function LendPage() {
                     Deposited
                   </span>
                   <span className="font-medium">
-                    {token.totalDeposited} {token.symbol}
+                    {deposits[token.symbol]} {token.symbol}
                   </span>
                 </div>
               </div>
@@ -244,7 +275,7 @@ export default function LendPage() {
                     Est. Annual Earnings
                   </span>
                   <span className="font-medium text-green-600">
-                    {((Number.parseFloat(token.totalDeposited) * Number.parseFloat(token.apy)) / 100).toFixed(2)}{" "}
+                    {((Number.parseFloat(deposits[token.symbol]) * Number.parseFloat(token.apy)) / 100).toFixed(2)}{" "}
                     {token.symbol}
                   </span>
                 </div>
