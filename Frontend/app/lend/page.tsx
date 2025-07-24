@@ -143,9 +143,11 @@ export default function LendPage() {
 
     try {
       // TODO: Implement contract interaction
-      // const contract = new ethers.Contract(contractAddress, abi, provider.getSigner())
-      // await contract.withdraw(tokenAddress, ethers.parseUnits(amount, 18))
+      console.log(token)
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
 
+      const withdraw_tx = await contract.withdraw(token, ethers.parseUnits(amount, 18))
+      await withdraw_tx.wait();
       toast({
         title: "Withdrawal Successful",
         description: `Successfully withdrew ${amount} ${token}`,
@@ -154,6 +156,7 @@ export default function LendPage() {
       setWithdrawAmounts((prev) => ({ ...prev, [token]: "" }))
 
       await fetchBalances()
+
     } catch (error) {
       console.error("Withdrawal failed:", error)
       toast({
@@ -258,7 +261,7 @@ export default function LendPage() {
                     className="flex-1"
                   />
                   <Button
-                    onClick={() => handleWithdraw(token.symbol, withdrawAmounts[token.symbol] || "")}
+                    onClick={() => handleWithdraw(token.address, withdrawAmounts[token.symbol] || "")}
                     variant="outline"
                     disabled={!isConnected || !isCorrectNetwork}
                   >
