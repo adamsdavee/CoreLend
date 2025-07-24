@@ -37,7 +37,7 @@ contract CoreLend is Ownable {
         isSupportedToken[token] = true;
     }
 
-    function deposit(address token, uint256 amount) external onlySupported(token) {
+    function deposit(address token, uint256 amount) external /** onlySupported(token) */{
         require(amount > 0, "Invalid amount");
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         lenderBalances[msg.sender][token] += amount;
@@ -50,7 +50,7 @@ contract CoreLend is Ownable {
     }
 
     function borrow(address collateralToken, address borrowToken, uint256 borrowAmount) external 
-        onlySupported(collateralToken) onlySupported(borrowToken)
+        /** onlySupported(collateralToken) onlySupported(borrowToken) */
     {
         require(borrowAmount > 0, "Invalid borrow amount");
 

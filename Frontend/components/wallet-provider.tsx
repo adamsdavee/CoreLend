@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast"
 interface WalletContextType {
   account: string | null
   provider: ethers.BrowserProvider | null
+  signer: ethers.JsonRpcSigner | null
   chainId: number | null
   isConnected: boolean
   isCorrectNetwork: boolean
@@ -32,6 +33,7 @@ const CORE_TESTNET = {
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<string | null>(null)
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null)
+  const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null)
   const [chainId, setChainId] = useState<number | null>(null)
   const { toast } = useToast()
 
@@ -52,10 +54,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const provider = new ethers.BrowserProvider(window.ethereum)
       const accounts = await provider.send("eth_requestAccounts", [])
       const network = await provider.getNetwork()
+      const signer = await provider.getSigner()
 
       setProvider(provider)
       setAccount(accounts[0])
       setChainId(Number(network.chainId))
+      setSigner(signer)
 
       if (Number(network.chainId) !== 1114) {
         toast({
@@ -153,6 +157,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       value={{
         account,
         provider,
+        signer,
         chainId,
         isConnected,
         isCorrectNetwork,

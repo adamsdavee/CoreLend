@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { useWallet } from "@/components/wallet-provider"
 import { useToast } from "@/hooks/use-toast"
 import { Coins, TrendingUp, Wallet } from "lucide-react"
+import { CONTRACT_ABI, CONTRACT_ADDRESS, CONTRACT_TOKEN } from "../constants/constants"
+import { ethers } from "ethers"
 
 const supportedTokens = [
   {
@@ -17,7 +19,7 @@ const supportedTokens = [
     balance: "1,250.00",
     apy: "8.5%",
     totalDeposited: "0.00",
-    address: "0x...",
+    address: "0x367a5a4C14214BfE67d3C00A97F19Cecd2cf9e87",
   },
   {
     symbol: "DAI",
@@ -26,7 +28,7 @@ const supportedTokens = [
     balance: "850.50",
     apy: "7.8%",
     totalDeposited: "0.00",
-    address: "0x...",
+    address: "0x7a8eF80C8136862fc7402E8Cfb9Cd1ea9c3BFB4B",
   },
   {
     symbol: "USDC",
@@ -35,12 +37,12 @@ const supportedTokens = [
     balance: "2,100.75",
     apy: "8.2%",
     totalDeposited: "0.00",
-    address: "0x...",
+    address: "0x2bE22845339D49E9b296AbA5462D78F2e929DB05",
   },
 ]
 
 export default function LendPage() {
-  const { isConnected, isCorrectNetwork } = useWallet()
+  const { isConnected, isCorrectNetwork, signer } = useWallet()
   const { toast } = useToast()
   const [depositAmounts, setDepositAmounts] = useState<{ [key: string]: string }>({})
   const [withdrawAmounts, setWithdrawAmounts] = useState<{ [key: string]: string }>({})
@@ -66,8 +68,14 @@ export default function LendPage() {
 
     try {
       // TODO: Implement contract interaction
-      // const contract = new ethers.Contract(contractAddress, abi, provider.getSigner())
-      // await contract.deposit(tokenAddress, ethers.parseUnits(amount, 18))
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+      const token_contract = new ethers.Contract(token, CONTRACT_TOKEN, signer)
+   
+      const approval_tx = await token_contract.approve(CONTRACT_ADDRESS, ethers.parseUnits(amount, 18))
+      await approval_tx.wait();
+
+      const deposit_tx = await contract.deposit(token, ethers.parseUnits(amount, 18))
+      await deposit_tx.wait();
 
       toast({
         title: "Deposit Successful",
@@ -193,7 +201,7 @@ export default function LendPage() {
                     className="flex-1"
                   />
                   <Button
-                    onClick={() => handleDeposit(token.symbol, depositAmounts[token.symbol] || "")}
+                    onClick={() => handleDeposit(token.address, depositAmounts[token.symbol] || "")}
                     className="bg-primary hover:bg-primary/90 text-black"
                     disabled={!isConnected || !isCorrectNetwork}
                   >
