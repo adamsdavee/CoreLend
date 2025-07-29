@@ -74,74 +74,44 @@ export default function LoansPage() {
   const { toast } = useToast()
   const [loans, setLoans] = useState<Loans[]>([])
 
-  const tokenMap = {
-    USDT: "0x367a5a4C14214BfE67d3C00A97F19Cecd2cf9e87",
-    DAI: "0x7a8eF80C8136862fc7402E8Cfb9Cd1ea9c3BFB4B",
-    USDC: "0x2bE22845339D49E9b296AbA5462D78F2e929DB05",
-  };
-  
-  const symbolFromAddress = (address: string): string => {
-    for (const [symbol, tokenAddr] of Object.entries(tokenMap)) {
-      if (tokenAddr.toLowerCase() === address.toLowerCase()) {
-        return symbol;
-      }
-    }
-    return "UNKNOWN";
-  };
-  
   const fetchLoans = async () => {
-    if (!provider || !signer) return;
-  
+    if (!provider || !signer) return
+
     try {
-      const userAddress = await signer.getAddress();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-  
-      const symbols = Object.keys(tokenMap);
-      const allLoans: Loans[] = [];
-  
-      for (const borrowSymbol of symbols) {
-        const borrowTokenAddress = tokenMap[borrowSymbol as keyof typeof tokenMap];
-        const loan = await contract.getLoanDetails(userAddress, borrowTokenAddress);
-  
-        // Only add if there's an actual loan
-        if (
-          loan.collateralAmount > 0 &&
-          loan.totalBorrowAmount > 0
-        ) {
-          const borrowAmount = Number(loan.totalBorrowAmount) / 1e18;
-          const collateralAmount = Number(loan.collateralAmount) / 1e18;
-          const collateralSymbol = symbolFromAddress(loan.collateralToken);
-  
-          const totalRepayable = borrowAmount * 1.1; // 10% interest
-          const healthFactor = collateralAmount / totalRepayable;
-  
+      console.log("Yup")
+      const userAddress = await signer.getAddress()
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+      const allLoans = []
+
+      for (const symbol of Object.keys(tokenMap)) {
+        console.log("In here")
+        const tokenAddress = tokenMap[symbol as keyof typeof tokenMap]
+        const loanData = await contract.getLoanDetails(userAddress, tokenAddress)
+        console.log(loanData)
+        if (loanData.collateralAmount > 0 || loanData.totalBorrowAmount > 0) {
+          const collateral = Number(loanData.collateralAmount) / 1e18
+          const borrowed = Number(loanData.totaltotalBorrowAmount) / 1e18
+          const totalRepayable = borrowed * 1.1
+          const healthFactor = collateral / totalRepayable
+
           allLoans.push({
             user: userAddress,
-            borrowToken: borrowSymbol,
-            collateralToken: collateralSymbol,
-            borrowedAmount: borrowAmount,
-            collateralAmount,
+            borrowToken: symbol,
+            collateralToken: symbol,
+            borrowedAmount: borrowed,
+            collateralAmount: collateral,
             totalRepayable,
             healthFactor,
-          });
+          })
         }
       }
-  
-      setLoans(allLoans);
+      setLoans(allLoans)
     } catch (err) {
-      console.log("Error fetching loans:");
+      console.error("Loan fetch failed", err)
     }
-  };
-  
-  
-  
-  
-  
-  
-  
-  
+  }
 
-  const handleRepay = async (borrowToken: string, collateralRequired: string, loanss: Loans) => {
+  const handleRepay = async (loanId: any, amount: any) => {
     if (!isConnected || !isCorrectNetwork) {
       toast({
         title: "Wallet Not Connected",
@@ -153,25 +123,15 @@ export default function LoansPage() {
 
     try {
       // TODO: Implement contract interaction
-      console.log("In here!")
-      console.log(borrowToken)
-      console.log(loanss)
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      const token_contract = new ethers.Contract(borrowToken, CONTRACT_TOKEN, signer)
-
-
-      const approval_tx = await token_contract.approve(CONTRACT_ADDRESS, ethers.parseUnits(collateralRequired, 18))
-      await approval_tx.wait();
-
-      const repay_tx = await contract.repay(borrowToken)
-      await repay_tx.wait();
+      // const contract = new ethers.Contract(contractAddress, abi, provider.getSigner())
+      // await contract.repay(loanId, ethers.parseUnits(amount, 18))
 
       toast({
         title: "Repayment Successful",
-        description: `Successfully repaid loan`,
+        description: `Successfully repaid loan ${loanId}`,
       })
     } catch (error) {
-    console.log("Repayment failed:")
+      console.error("Repayment failed:", error)
       toast({
         title: "Repayment Failed",
         description: "Transaction failed. Please try again.",
@@ -200,7 +160,7 @@ export default function LoansPage() {
         description: `Successfully liquidated loan ${loanId}`,
       })
     } catch (error) {
-      console.log("Liquidation failed:")
+      console.error("Liquidation failed:", error)
       toast({
         title: "Liquidation Failed",
         description: "Transaction failed. Please try again.",
@@ -351,7 +311,7 @@ export default function LoansPage() {
                         <div className="flex space-x-2">
                           <Button
                             size="sm"
-                            onClick={() => handleRepay(tokenMap[loan.borrowToken as keyof typeof tokenMap], loan.totalRepayable.toString(), loan)}
+                            onClick={() => handleRepay(1, 10)}
                             disabled={!isConnected || !isCorrectNetwork}
                           >
                             Repay

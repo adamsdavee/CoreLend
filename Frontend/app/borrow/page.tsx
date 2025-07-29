@@ -9,15 +9,19 @@ import { Badge } from "@/components/ui/badge"
 import { useWallet } from "@/components/wallet-provider"
 import { useToast } from "@/hooks/use-toast"
 import { AlertTriangle, Calculator, TrendingDown } from "lucide-react"
+import { CONTRACT_ABI, CONTRACT_ADDRESS, CONTRACT_TOKEN } from "../constants/constants"
+import { ethers } from "ethers"
+import { Value } from "@radix-ui/react-select"
 
 const tokens = [
-  { symbol: "USDT", name: "Tether USD", logo: "💵" },
-  { symbol: "DAI", name: "Dai Stablecoin", logo: "🟡" },
-  { symbol: "USDC", name: "USD Coin", logo: "🔵" },
+  { symbol: "USDT", name: "Tether USD", logo: "💵", address: "0x367a5a4C14214BfE67d3C00A97F19Cecd2cf9e87" },
+  { symbol: "DAI", name: "Dai Stablecoin", logo: "🟡", address: "0x7a8eF80C8136862fc7402E8Cfb9Cd1ea9c3BFB4B" },
+  { symbol: "USDC", name: "USD Coin", logo: "🔵", address: "0x2bE22845339D49E9b296AbA5462D78F2e929DB05" },
 ]
 
+
 export default function BorrowPage() {
-  const { isConnected, isCorrectNetwork } = useWallet()
+  const { isConnected, isCorrectNetwork, signer } = useWallet()
   const { toast } = useToast()
   const [collateralToken, setCollateralToken] = useState("")
   const [borrowToken, setBorrowToken] = useState("")
@@ -56,13 +60,21 @@ export default function BorrowPage() {
 
     try {
       // TODO: Implement contract interaction
-      // const contract = new ethers.Contract(contractAddress, abi, provider.getSigner())
-      // await contract.borrow(
-      //   collateralTokenAddress,
-      //   borrowTokenAddress,
-      //   ethers.parseUnits(borrowAmount, 18),
-      //   ethers.parseUnits(collateralRequired, 18)
-      // )
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+      const token_contract = new ethers.Contract(collateralToken, CONTRACT_TOKEN, signer)
+
+      console.log(collateralToken)
+      console.log(borrowToken)
+
+      const approval_tx = await token_contract.approve(CONTRACT_ADDRESS, ethers.parseUnits(collateralRequired, 18))
+      await approval_tx.wait();
+
+      const borrow_tx = await contract.borrow(
+        collateralToken,
+        borrowToken,
+        ethers.parseUnits(borrowAmount, 18)
+      )
+      await borrow_tx.wait()
 
       toast({
         title: "Borrow Successful",
@@ -74,7 +86,7 @@ export default function BorrowPage() {
       setBorrowToken("")
       setBorrowAmount("")
     } catch (error) {
-      console.error("Borrow failed:", error)
+      console.log("Borrow failed:")
       toast({
         title: "Borrow Failed",
         description: "Transaction failed. Please try again.",
@@ -107,13 +119,13 @@ export default function BorrowPage() {
           {/* Collateral Token Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Collateral Token</label>
-            <Select value={collateralToken} onValueChange={setCollateralToken}>
+            <Select onValueChange={(value) => setCollateralToken(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select collateral token" />
               </SelectTrigger>
               <SelectContent>
                 {tokens.map((token) => (
-                  <SelectItem key={token.symbol} value={token.symbol}>
+                  <SelectItem key={token.symbol} value={token.address} >
                     <div className="flex items-center space-x-2">
                       <span>{token.logo}</span>
                       <span>{token.symbol}</span>
@@ -128,13 +140,13 @@ export default function BorrowPage() {
           {/* Borrow Token Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Borrow Token</label>
-            <Select value={borrowToken} onValueChange={setBorrowToken}>
+            <Select onValueChange={(value) => setBorrowToken(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select token to borrow" />
               </SelectTrigger>
               <SelectContent>
                 {tokens.map((token) => (
-                  <SelectItem key={token.symbol} value={token.symbol}>
+                  <SelectItem key={token.symbol} value={token.address}>
                     <div className="flex items-center space-x-2">
                       <span>{token.logo}</span>
                       <span>{token.symbol}</span>
@@ -170,13 +182,13 @@ export default function BorrowPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Collateral Required (150%)</span>
                   <span className="font-medium">
-                    {collateralRequired} {collateralToken}
+                    {collateralRequired} {tokens.find(t => t.address === collateralToken)?.symbol}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Liquidation Threshold</span>
                   <span className="font-medium">
-                    {liquidationPrice} {collateralToken}
+                    {liquidationPrice} {tokens.find(t => t.address === collateralToken)?.symbol}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">

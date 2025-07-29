@@ -113,7 +113,7 @@ export default function LendPage() {
       await fetchBalances()
 
     } catch (error) {
-      console.error("Deposit failed:", error)
+      console.log("Deposit failed:")
       toast({
         title: "Deposit Failed",
         description: "Transaction failed. Please try again.",
@@ -158,7 +158,7 @@ export default function LendPage() {
       await fetchBalances()
 
     } catch (error) {
-      console.error("Withdrawal failed:", error)
+      console.log("Withdrawal failed:")
       toast({
         title: "Withdrawal Failed",
         description: "Transaction failed. Please try again.",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -8,8 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useWallet } from "@/components/wallet-provider"
 import { useToast } from "@/hooks/use-toast"
 import { AlertTriangle, Clock, DollarSign, TrendingUp } from "lucide-react"
-import { CONTRACT_ABI, CONTRACT_ADDRESS, CONTRACT_TOKEN } from "../constants/constants"
-import { ethers } from "ethers"
 
 // Mock loan data - in real app, this would come from smart contract
 const mockLoans = [
@@ -51,97 +49,12 @@ const mockLoans = [
   },
 ]
 
-const tokenMap = {
-    USDT: "0x367a5a4C14214BfE67d3C00A97F19Cecd2cf9e87",
-    DAI: "0x7a8eF80C8136862fc7402E8Cfb9Cd1ea9c3BFB4B",
-    USDC: "0x2bE22845339D49E9b296AbA5462D78F2e929DB05",
-  }
-  
-  interface Loans {
-    user: string
-    borrowToken: string
-    collateralToken: string
-    borrowedAmount: number
-    collateralAmount: number
-    totalRepayable: number
-    healthFactor: number
-  }
-
-  
-
 export default function LoansPage() {
-  const { isConnected, isCorrectNetwork, provider, signer } = useWallet()
+  const { isConnected, isCorrectNetwork } = useWallet()
   const { toast } = useToast()
-  const [loans, setLoans] = useState<Loans[]>([])
+  const [loans] = useState(mockLoans)
 
-  const tokenMap = {
-    USDT: "0x367a5a4C14214BfE67d3C00A97F19Cecd2cf9e87",
-    DAI: "0x7a8eF80C8136862fc7402E8Cfb9Cd1ea9c3BFB4B",
-    USDC: "0x2bE22845339D49E9b296AbA5462D78F2e929DB05",
-  };
-  
-  const symbolFromAddress = (address: string): string => {
-    for (const [symbol, tokenAddr] of Object.entries(tokenMap)) {
-      if (tokenAddr.toLowerCase() === address.toLowerCase()) {
-        return symbol;
-      }
-    }
-    return "UNKNOWN";
-  };
-  
-  const fetchLoans = async () => {
-    if (!provider || !signer) return;
-  
-    try {
-      const userAddress = await signer.getAddress();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-  
-      const symbols = Object.keys(tokenMap);
-      const allLoans: Loans[] = [];
-  
-      for (const borrowSymbol of symbols) {
-        const borrowTokenAddress = tokenMap[borrowSymbol as keyof typeof tokenMap];
-        const loan = await contract.getLoanDetails(userAddress, borrowTokenAddress);
-  
-        // Only add if there's an actual loan
-        if (
-          loan.collateralAmount > 0 &&
-          loan.totalBorrowAmount > 0
-        ) {
-          const borrowAmount = Number(loan.totalBorrowAmount) / 1e18;
-          const collateralAmount = Number(loan.collateralAmount) / 1e18;
-          const collateralSymbol = symbolFromAddress(loan.collateralToken);
-  
-          const totalRepayable = borrowAmount * 1.1; // 10% interest
-          const healthFactor = collateralAmount / totalRepayable;
-  
-          allLoans.push({
-            user: userAddress,
-            borrowToken: borrowSymbol,
-            collateralToken: collateralSymbol,
-            borrowedAmount: borrowAmount,
-            collateralAmount,
-            totalRepayable,
-            healthFactor,
-          });
-        }
-      }
-  
-      setLoans(allLoans);
-    } catch (err) {
-      console.log("Error fetching loans:");
-    }
-  };
-  
-  
-  
-  
-  
-  
-  
-  
-
-  const handleRepay = async (borrowToken: string, collateralRequired: string, loanss: Loans) => {
+  const handleRepay = async (loanId: string, amount: string) => {
     if (!isConnected || !isCorrectNetwork) {
       toast({
         title: "Wallet Not Connected",
@@ -153,25 +66,15 @@ export default function LoansPage() {
 
     try {
       // TODO: Implement contract interaction
-      console.log("In here!")
-      console.log(borrowToken)
-      console.log(loanss)
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      const token_contract = new ethers.Contract(borrowToken, CONTRACT_TOKEN, signer)
-
-
-      const approval_tx = await token_contract.approve(CONTRACT_ADDRESS, ethers.parseUnits(collateralRequired, 18))
-      await approval_tx.wait();
-
-      const repay_tx = await contract.repay(borrowToken)
-      await repay_tx.wait();
+      // const contract = new ethers.Contract(contractAddress, abi, provider.getSigner())
+      // await contract.repay(loanId, ethers.parseUnits(amount, 18))
 
       toast({
         title: "Repayment Successful",
-        description: `Successfully repaid loan`,
+        description: `Successfully repaid loan ${loanId}`,
       })
     } catch (error) {
-    console.log("Repayment failed:")
+      console.error("Repayment failed:", error)
       toast({
         title: "Repayment Failed",
         description: "Transaction failed. Please try again.",
@@ -180,7 +83,7 @@ export default function LoansPage() {
     }
   }
 
-  const handleLiquidate = async (loanId: any) => {
+  const handleLiquidate = async (loanId: string) => {
     if (!isConnected || !isCorrectNetwork) {
       toast({
         title: "Wallet Not Connected",
@@ -200,7 +103,7 @@ export default function LoansPage() {
         description: `Successfully liquidated loan ${loanId}`,
       })
     } catch (error) {
-      console.log("Liquidation failed:")
+      console.error("Liquidation failed:", error)
       toast({
         title: "Liquidation Failed",
         description: "Transaction failed. Please try again.",
@@ -229,13 +132,9 @@ export default function LoansPage() {
     return `${diffDays} days ago`
   }
 
-    useEffect(() => {
-      if (isConnected && isCorrectNetwork) fetchLoans()
-    }, [isConnected])
-
-  const totalBorrowed = loans.reduce((sum, loan) => sum + loan.borrowedAmount, 0)
-  const totalCollateral = loans.reduce((sum, loan) => sum + loan.collateralAmount, 0)
-  const totalInterest = loans.reduce((sum, loan) => sum + (loan.totalRepayable - loan.borrowedAmount), 0)
+  const totalBorrowed = loans.reduce((sum, loan) => sum + Number.parseFloat(loan.borrowAmount), 0)
+  const totalCollateral = loans.reduce((sum, loan) => sum + Number.parseFloat(loan.collateralAmount), 0)
+  const totalInterest = loans.reduce((sum, loan) => sum + Number.parseFloat(loan.interestAccrued), 0)
 
   return (
     <div className="space-y-8">
@@ -310,8 +209,8 @@ export default function LoansPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loans.map((loan, i) => (
-                    <TableRow key={i}>
+                  {loans.map((loan) => (
+                    <TableRow key={loan.id}>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-medium">
@@ -322,13 +221,13 @@ export default function LoansPage() {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-medium">
-                            {loan.borrowedAmount} {loan.borrowToken}
+                            {loan.borrowAmount} {loan.borrowToken}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="font-medium text-red-600">
-                          +{loan.totalRepayable - loan.borrowedAmount} {loan.borrowToken}
+                          +{loan.interestAccrued} {loan.borrowToken}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -345,13 +244,13 @@ export default function LoansPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-gray-500">{loan.borrowedAmount}</div>
+                        <div className="text-sm text-gray-500">{formatDate(loan.timeBorrowed)}</div>
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button
                             size="sm"
-                            onClick={() => handleRepay(tokenMap[loan.borrowToken as keyof typeof tokenMap], loan.totalRepayable.toString(), loan)}
+                            onClick={() => handleRepay(loan.id, loan.totalRepayable)}
                             disabled={!isConnected || !isCorrectNetwork}
                           >
                             Repay
@@ -360,7 +259,7 @@ export default function LoansPage() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => handleLiquidate(1)}
+                              onClick={() => handleLiquidate(loan.id)}
                               disabled={!isConnected || !isCorrectNetwork}
                             >
                               Liquidate

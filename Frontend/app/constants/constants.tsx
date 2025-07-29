@@ -1,4 +1,4 @@
-const CONTRACT_ADDRESS = "0xd20a5faa9B52C9BC9d9a3D42E52B067643C59b57";
+const CONTRACT_ADDRESS = "0xd1022F7C4690458A3bB564710cE8f320aE940cB2";
 
 const CONTRACT_ABI = [
   {
@@ -188,7 +188,7 @@ const CONTRACT_ABI = [
         "type": "address"
       }
     ],
-    "name": "getLoansBalance",
+    "name": "getLoanDetails",
     "outputs": [
       {
         "components": [
@@ -209,7 +209,7 @@ const CONTRACT_ABI = [
           },
           {
             "internalType": "uint256",
-            "name": "borrowAmount",
+            "name": "totalBorrowAmount",
             "type": "uint256"
           },
           {
@@ -218,7 +218,7 @@ const CONTRACT_ABI = [
             "type": "uint256"
           }
         ],
-        "internalType": "struct CoreLend.Loan",
+        "internalType": "struct CoreLend.LoanPosition",
         "name": "",
         "type": "tuple"
       }
@@ -301,50 +301,6 @@ const CONTRACT_ABI = [
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "loans",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "collateralToken",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "borrowToken",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "collateralAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "borrowAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "owner",
     "outputs": [
@@ -388,6 +344,50 @@ const CONTRACT_ABI = [
     "name": "transferOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "userLoans",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "collateralToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "borrowToken",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "collateralAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalBorrowAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
